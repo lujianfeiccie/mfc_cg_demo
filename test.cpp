@@ -323,16 +323,16 @@ void initNET(map< int, Edge *> &NET, vector<Point> p){
 	map<int ,Edge *>::iterator iNET;
 	int index;
 	for(vector<Point>::iterator j=p.begin(); j!=p.end()-1 ; j++){
-		temp = new Edge;
-		index = ( j->y > (j+1) -> y )? ( (j+1) -> y): (j->y);
-		temp->v = ( j->y > (j+1) -> y )? ( (j+1) ->x ): (j->x);
-		temp->k = (j->x - (j+1)->x) / ( (j->y)*1.0 - (j+1)->y );
-		temp->maxy = ( j->y > (j+1) -> y )? (j->y ): ((j+1) -> y);
+		temp = new Edge;		
+		index = ( j->y > (j+1) -> y )? ( (j+1) -> y): (j->y);//index取两点最小Y值
+		temp->v = ( j->y > (j+1) -> y )? ( (j+1) ->x ): (j->x);//v取两点低点x值
+		temp->k = (j->x - (j+1)->x) / ( (j->y)*1.0 - (j+1)->y );//计算x和y的比值
+		temp->maxy = ( j->y > (j+1) -> y )? (j->y ): ((j+1) -> y);//取两点高点y值
 		temp->next = NULL;
-		if( (iNET=NET.find(index)) == NET.end()){
-			NET[index] = temp;
+		if( (iNET=NET.find(index)) == NET.end()){//map中不存在
+			NET[index] = temp;//以两点最小Y值作为索引存放边对象
 		}
-		else{
+		else{ //链接一个结点
 			temp->next=iNET->second;
 			NET[index] = temp;
 		}
