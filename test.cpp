@@ -26,6 +26,11 @@ void scan_seed_fill(HDC , int, int, int, int);
 void drawmap(HDC, vector<Point>, int);
 void full(HDC, vector<Point>, int);
 
+void drawline_study(HDC, int ,int ,int ,int ,int );
+void swap(int *x0,int *y0,int *x1,int *y1);
+void drawvline_study(HDC, int,int,int,int);
+void drawhline_study(HDC, int,int,int,int);
+
 LRESULT CALLBACK MainWndProc(HWND, UINT, WPARAM, LPARAM);
 int APIENTRY WinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -131,6 +136,22 @@ LRESULT CALLBACK MainWndProc(HWND hwnd,UINT message, WPARAM wParam, LPARAM lPara
 			else hdc=::GetDC(hwnd);
 			full(hdc,points,0x00ff0000);
 			::EndPaint(hwnd, &ps);
+			return 0;
+		case ID_MENU_ITEM_DRAW_LINE:
+			{
+				if(!hdc)
+				hdc=::BeginPaint(hwnd, &ps);
+				else hdc=::GetDC(hwnd);
+
+			int x0 = 50,y0 = 300, x1 = x0 + 300, y1 = y0 + 100; //k=(0,1]
+
+			 // x1 = x0, y1 = y0 + 300; //竖线
+			 // x1 = x0+300, y1 = y0; //水平线
+			//  x1 = x0+300, y1 = y0+350; //k>1
+			//  x1 = x0+300, y1 = y0-150; //k=[-1,0)
+			 x1 = x0+300, y1 = y0-500; //k<-1
+			drawline_study(hdc,x0,y0,x1,y1,0x00000000);
+			}
 			return 0;
 		}
 		return 0;
@@ -461,4 +482,153 @@ void full(HDC hdc, vector<Point>p, int color){
 	//***********************************//
 	return;
 }
+/**
+	   3  |  2
+		  |
+	4     |     1 
+-----------------------
+	5	  |		8
+		  |
+	   6  |  7
+*/
+void drawline_study(HDC hdc, int x0,int y0,int x1,int y1,int color)
+{
+	if( x0 > x1)               /* 保证x0<x1,即x0为x1左边的点。*/
+    {
+        swap(&x0,&y0,&x1,&y1);  
+    }
+	int dx = x1 - x0;
+	int dy = y1 - y0;
+	int d = (dy << 1) - dx;
+	int d1 = (dy - dx) << 1;
+	int d2 = dy << 1;
+	int x=x0,y=y0;
+	string str = "start";
+	::TextOutA(hdc,x,y,str.c_str(),str.length());
 
+
+	if(dx == 0)  /* 斜率为无穷大，画直竖线 */
+    {
+        drawvline_study(hdc,x0,y0,y1,color);
+        return;
+    }
+
+	if(dy == 0)  /* 斜率为0，画直横线 */
+    {
+        drawhline_study(hdc,x0,y0,x1,color);
+        return;
+    }
+
+	
+	//1.  k=(0,1] 
+	if((dx >= dy) && dy > 0)
+	{
+		d = (dy<<1) - dx;
+		d1 = (dy - dx) << 1;
+		d2 = dy << 1;
+		for(x = x0;x < x1;x++)
+		{
+			::SetPixel(hdc,x,y,color);
+			if(d > 0)
+			{
+			   ++y;
+			   d += d1;
+			}
+			else
+			{
+			   d += d2;
+			}
+		}
+		return;
+	}
+
+	//2. k >1 
+	if( (dy > dx ) && dy >0 )
+	{
+		d = dy - (dx<<1);
+		d1 =  (dy - dx) <<1;
+		d2 =  dx << 1;
+		for(y = y0;y < y1;y++)
+		{
+			::SetPixel(hdc,x,y,color);
+			if(d < 0)
+			{
+			   ++x;
+			   d += d1;
+			}
+			else
+			{
+			   d += -d2;
+			}
+		}
+		return;
+	}
+	//8.
+	if( ( dx>=abs(dy) ) && ( dy<0 ))           /* k=[-1,0) */
+    {
+		// d = (dy<<1) + dx;
+		  d = (dy << 1) + dx;           /* d = 2a-b */
+		  d1 = (dy + dx)<<1;
+		  d2 =  dy << 1;
+		 for(x = x0;x<x1;x++)
+		 {
+			::SetPixel(hdc,x,y,color);
+			if(d<0)
+			{
+				--y;
+				d += d1;
+			}
+			else
+			{
+				d += d2;
+			}
+		 }
+	}
+	//7.
+	if( (abs(dy)>dx)&&(dy<0))           /* k<-1 */
+    {
+		  d = dy + (dx << 1);          /* d = a - 2b */
+		  d1 = ( dy + dx )<<1;
+		  d2 = dx << 1;
+		  for(y = y0;y>y1;y--)
+		  {
+			::SetPixel(hdc,x,y,color);
+		    if(d > 0)
+            {
+                d += d1;   /* 选择SE点 */
+                x++;
+            }
+            else
+            {
+                d += d2;          /* 选择S点 */
+            }
+		  }
+		  return;
+	}
+}
+
+void swap(int *x0,int *y0,int *x1,int *y1)
+{
+   int x,y;
+   x = *x0; *x0 = *x1; *x1 = x;
+   y = *y0; *y0 = *y1; *y1 = y;
+}
+
+void drawvline_study(HDC hdc, int x0,int y0,int y1,int color)
+{
+	int x = x0;
+	int y = y0;
+	for(y = y0; y < y1; y++)
+	{
+		::SetPixel(hdc,x,y,color);
+	}
+}
+void drawhline_study(HDC hdc, int x0,int y0,int x1,int color)
+{
+	int x = x0;
+	int y = y0;
+	for(x = x0; x < x1; x++)
+	{
+		::SetPixel(hdc,x,y,color);
+	}
+}
