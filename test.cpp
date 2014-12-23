@@ -26,11 +26,26 @@ void scan_seed_fill(HDC , int, int, int, int);
 void drawmap(HDC, vector<Point>, int);
 void full(HDC, vector<Point>, int);
 
+////////////////学习///////////////////////////////
 void drawline_study(HDC, int ,int ,int ,int ,int );
 void swap(int *x0,int *y0,int *x1,int *y1);
 void drawvline_study(HDC, int,int,int,int);
 void drawhline_study(HDC, int,int,int,int);
 
+typedef struct Edge_Study{
+	int maxy;
+	int x;//x|miny
+	float m; //1/k
+}Edge_Study;
+//初始化ET表
+void initScanLineNewEdgeTable_Study(vector<vector<Edge_Study>>& ,Point* ,int,int,int);
+void ScanLinePolygonFill(HDC,Point*,int,int);
+void GetPolygonMinMax(Point*,int,int*,int*);
+void HorizonEdgeFill(HDC,Point*,int,int);
+void ProcessScanLineFill(HDC,vector<vector<Edge_Study>>&,int,int,int);
+void InsertNetListToAet(vector<Edge_Study>,vector<Edge_Study>&);
+
+void print(vector<Edge_Study> edge);
 LRESULT CALLBACK MainWndProc(HWND, UINT, WPARAM, LPARAM);
 int APIENTRY WinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -81,6 +96,20 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 	::ShowWindow(hwnd, nCmdShow);
 	::UpdateWindow(hwnd);
 	MSG msg;
+
+	vector<Edge_Study> edge,aet;
+	Edge_Study edge1,edge2,edge3,edge4;
+	edge1.x = 3;
+	edge2.x = 4;
+	edge3.x = 5;
+	edge4.x = 1;
+	edge.push_back(edge1);
+	edge.push_back(edge2);
+	edge.push_back(edge3);
+	edge.push_back(edge4);
+	print(edge);
+	InsertNetListToAet(edge,aet);
+	print(aet);
 	while(::GetMessage(&msg, NULL, 0, 0))
 	{
 		::TranslateMessage(&msg);
@@ -491,6 +520,7 @@ void full(HDC hdc, vector<Point>p, int color){
 		  |
 	   6  |  7
 */
+////////////////学习///////////////////////////////
 void drawline_study(HDC hdc, int x0,int y0,int x1,int y1,int color)
 {
 	if( x0 > x1)               /* 保证x0<x1,即x0为x1左边的点。*/
@@ -631,4 +661,135 @@ void drawhline_study(HDC hdc, int x0,int y0,int x1,int color)
 	{
 		::SetPixel(hdc,x,y,color);
 	}
+}
+void ScanLinePolygonFill(HDC hdc,Point* pts,int SIZE_OF_PTS,int color)
+{
+	int min_y = 0;
+    int max_y = 0;
+	GetPolygonMinMax(pts,SIZE_OF_PTS,&min_y,&max_y);
+
+	vector<vector<Edge_Study>> net(max_y - min_y + 1);
+
+	initScanLineNewEdgeTable_Study(net,pts,SIZE_OF_PTS,min_y,max_y);
+
+}
+void GetPolygonMinMax(Point* pts,int SIZE_OF_PTS,int* min_y,int* max_y)
+{
+	int tmax_y = (pts + 0)->y;
+	int tmin_y = (pts + 0)->y;
+	for(int i=1;i<SIZE_OF_PTS;i++)
+	{
+		if((pts + i)->y > tmax_y)
+		{
+			tmax_y = (pts + i)->y;
+		}
+		if((pts + i)->y < tmin_y)
+		{
+			tmin_y = (pts + i)->y;
+		}
+	}
+	*min_y = tmin_y;
+	*max_y = tmax_y;
+}
+
+void initScanLineNewEdgeTable_Study(vector<vector<Edge_Study>>& net,Point* pts,int SIZE_OF_PTS,int ymin, int ymax)
+{
+	for(int i=0;i<SIZE_OF_PTS-1;i++)
+	{
+		Edge_Study model;
+		Point p_start = *(pts + i);//起点
+		Point p_end = *(pts + ((i + 1) % SIZE_OF_PTS) );//终点
+		Point p_start_beside = *(pts + (i - 1 + SIZE_OF_PTS) % SIZE_OF_PTS );//起点邻点
+		Point p_end_beside = *(pts + ((i + 2) % SIZE_OF_PTS) );//终点邻点
+
+		if(p_end.y != p_start.y) //不处理水平线
+		{
+			model.m = double(p_end.x - p_start.x) / double(p_end.y - p_end.y);
+			if(p_end.y > p_start.y) //终点的y值大于起点的y值
+			{
+				model.x = p_start.x; //取低点的x值
+				if(p_end_beside.y >= p_end.y) //终点邻边的y值大于等于终点的y值(左顶点和右顶点)
+				{
+					model.maxy = p_end.y - 1;//平衡和交点奇偶个数
+				}
+				else
+				{
+					model.maxy = p_end.y;
+				}
+				net[p_start.y - ymin].push_back(model);//低点追加
+			}
+			else
+			{
+				model.x = p_end.x; //取低点的x值
+				if(p_start_beside.y >= p_start.y)
+				{
+					model.maxy = p_start.y - 1;
+				}
+				else
+				{
+					model.maxy = p_start.y;
+				}
+				net[p_end.y - ymin].push_back(model); //低点追加
+			}
+		}
+	}
+}
+
+void HorizonEdgeFill(HDC hdc,Point* pts,int SIZE_OF_PTS,int color)
+{
+	for(int i=0;i<SIZE_OF_PTS;i++)
+	{
+		Point p_start = *(pts + i);
+		Point p_end = *(pts + ((i+1) % SIZE_OF_PTS) );
+		if(p_start.y == p_end.y)
+		{
+			drawline_study(hdc,p_start.x,p_start.y,p_end.x,p_end.y,color);
+		}
+	}
+}
+void ProcessScanLineFill(HDC,vector<vector<Edge_Study>>& net,int ymin,int ymax,int color)
+{
+	vector<Edge_Study> AET;
+	for(int y = ymin; y <= ymax; y++)
+	{
+		//InsertNetListToAet   //函数负责将扫描线对应的所有新边插入到aet中，
+							   //插入操作到保证aet还是有序表
+
+		//FillAetScanLine(aet, y, color);//填充
+
+		//RemoveNonActiveEdgeFromAet(aet, y);//删除非活动边
+
+		 //UpdateAndResortAet(aet);//更新活动边表中每项的xi值，并根据xi重新排序
+	}
+}
+void InsertNetListToAet(vector<Edge_Study> edge,vector<Edge_Study>& AET)
+{
+	AET.insert(AET.begin(),edge[0]);
+
+	for(int i=1;i<edge.size();i++)
+	{
+		int j=0;
+		while(j<AET.size())
+		{
+			if(edge[i].x > AET[j].x)
+			{
+				j++;
+			}
+			else
+			{
+				break;
+			}
+		}
+		AET.insert(AET.begin()+j,edge[i]);
+	}
+}
+void print(vector<Edge_Study> edge)
+{
+	vector<Edge_Study>::iterator iedge;
+	Util::LOG("--------------------start--------------------------");
+	for(iedge = edge.begin();iedge!=edge.end();iedge++)
+	{
+		Util::LOG("%d",iedge->x);
+	}
+	Util::LOG("---------------------end-------------------------");
 }
