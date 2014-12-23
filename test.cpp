@@ -44,6 +44,10 @@ void GetPolygonMinMax(Point*,int,int*,int*);
 void HorizonEdgeFill(HDC,Point*,int,int);
 void ProcessScanLineFill(HDC,vector<vector<Edge_Study>>&,int,int,int);
 void InsertNetListToAet(vector<Edge_Study>,vector<Edge_Study>&);
+void FillAETScanLine(HDC,vector<Edge_Study>, int, int);
+void RemoveNonActiveEdgeFromAet(vector<Edge_Study>,int y);
+void UpdateAndResortAet(vector<Edge_Study>);
+void Sort(vector<Edge_Study>& );
 
 void print(vector<Edge_Study> edge);
 LRESULT CALLBACK MainWndProc(HWND, UINT, WPARAM, LPARAM);
@@ -108,8 +112,9 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 	edge.push_back(edge3);
 	edge.push_back(edge4);
 	print(edge);
-	InsertNetListToAet(edge,aet);
-	print(aet);
+	//InsertNetListToAet(edge,aet);
+	Sort(edge);
+	print(edge);
 	while(::GetMessage(&msg, NULL, 0, 0))
 	{
 		::TranslateMessage(&msg);
@@ -783,6 +788,76 @@ void InsertNetListToAet(vector<Edge_Study> edge,vector<Edge_Study>& AET)
 		AET.insert(AET.begin()+j,edge[i]);
 	}
 }
+
+void FillAETScanLine(HDC hdc,vector<Edge_Study> AET, int y, int color)
+{
+	vector<Edge_Study>::iterator iaet;
+	bool fill = false;
+	for(iaet = AET.begin();iaet != AET.end()-1; iaet++)
+	{
+		fill = !fill;
+		if(fill)
+		{
+			drawline_study(hdc,iaet->x,y ,(iaet+1)->x,y,color);
+		}
+	}
+}
+
+bool IsEdgeOutOfActive(Edge_Study e,int y)
+{
+	return (e.maxy == y);
+}
+void RemoveNonActiveEdgeFromAet(vector<Edge_Study> &AET,int y)
+{
+	vector<Edge_Study>::iterator iaet;
+	for(iaet = AET.begin(); iaet != AET.end(); iaet++)
+	{
+		if(IsEdgeOutOfActive(*iaet,y))
+		{
+			AET.erase(iaet);
+		}
+	}
+}
+
+void UpdateAetEdgeInfo(Edge_Study& e)
+{
+	e.x += e.m;
+}
+
+void Sort(vector<Edge_Study>& AET)
+{
+	vector<Edge_Study> tmp;
+	tmp.push_back(AET[0]);
+	for(int i=1;i<AET.size();i++)
+	{
+		int j=0;
+		while(j<tmp.size())
+		{
+			if(AET[i].x > tmp[j].x)
+			{
+				j++;
+			}
+			else
+			{
+				break;
+			}
+		}
+		tmp.insert(tmp.begin() + j,AET[i]);
+	}
+	//AET.clear();
+	AET = tmp;
+}
+void UpdateAndResortAet(vector<Edge_Study> &AET)
+{
+	//¸üÐÂx
+	vector<Edge_Study>::iterator iaet;
+	for(iaet = AET.begin(); iaet != AET.end(); iaet++)
+	{
+		UpdateAetEdgeInfo(*iaet);
+	}
+
+}
+
 void print(vector<Edge_Study> edge)
 {
 	vector<Edge_Study>::iterator iedge;
