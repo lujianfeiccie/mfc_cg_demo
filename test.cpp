@@ -844,11 +844,11 @@ void FillAETScanLine(HDC hdc,vector<Edge_Study> AET, int y, int color)
 	for(iaet = AET.begin();iaet != AET.end()-1; iaet++)
 	{
 		fill = !fill;
-		//if(true == fill)
-		//{
+		if(true == fill)
+		{
 			Util::LOG("(%lf,%d)->(%lf,%d)",iaet->x,y,(iaet+1)->x,y);
 			drawline_study(hdc,iaet->x,y ,(iaet+1)->x,y,color);
-		//}
+		}
 	}
 }
 
