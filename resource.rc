@@ -64,6 +64,7 @@ BEGIN
     POPUP "算法学习"
     BEGIN
         MENUITEM "画线",                          ID_MENU_ITEM_DRAW_LINE
+        MENUITEM "多边形填充",                       ID_MENU_ITEM_FILL
     END
 END
 
